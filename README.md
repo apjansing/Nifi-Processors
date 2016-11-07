@@ -1,0 +1,1 @@
+All processors added to this repository have been developed by myself (Alexander Jansing) on my time and with my own resources. I was not paid for these processors and I am offering them up to the open source community to do with them as they will.
