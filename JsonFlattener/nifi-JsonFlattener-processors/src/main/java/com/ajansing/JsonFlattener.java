@@ -64,6 +64,8 @@ import com.google.gson.JsonParser;
 @WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
 public class JsonFlattener extends AbstractProcessor {
 
+	final NifiTools nt = new NifiTools();
+	
 	public static final PropertyDescriptor SEP = new PropertyDescriptor.Builder().name("Flattening delimeter")
 			.description("This is the delimeter to be used to signify where the Json was flattened. i.e. "
 					+ "first:{second... turns into first.second when the delimeter is \".\".")
@@ -119,14 +121,17 @@ public class JsonFlattener extends AbstractProcessor {
 		String delim = context.getProperty(SEP).getValue();
 
 		final ComponentLog logger = getLogger();
-		final Gson gson = new Gson();
 		try{
-			JsonObject originalJson = getJson(flowFile, session, gson);
-			JsonObject flattenedJson = flattenJson(originalJson, delim);
-			flowFile = writeFlowFile(flowFile, session, originalJson);
-			session.transfer(flowFile, ORIGINAL);
-			FlowFile flat = writeFlowFile(session.create(), session, flattenedJson);
-			session.transfer(flat, FLATTENED);
+			JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
+			if(originalJson.isJsonArray()){
+				//TODO
+			} else if(originalJson.isJsonObject()){				
+				JsonObject flattenedJson = flattenJson(originalJson.getAsJsonObject(), delim);
+				flowFile = writeFlowFile(flowFile, session, originalJson.getAsJsonObject());
+				session.transfer(flowFile, ORIGINAL);
+				FlowFile flat = writeFlowFile(session.create(), session, flattenedJson);
+				session.transfer(flat, FLATTENED);
+			}
 		} catch (Exception e){
 			logger.error("Error parsing json.", e);
 			session.transfer(flowFile, ERROR);

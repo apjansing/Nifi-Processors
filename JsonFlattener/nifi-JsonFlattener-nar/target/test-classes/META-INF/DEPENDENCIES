@@ -7,6 +7,8 @@ nifi-JsonFlattener-nar
 
 
 From: 'an unknown organization'
+  - NifiTools  com.ajansing:NifiTools:jar:0.0.1-SNAPSHOT
+
   - Gson (https://github.com/google/gson/gson) com.google.code.gson:gson:jar:2.7
     License: Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
   - Bouncy Castle PKIX, CMS, EAC, TSP, PKCS, OCSP, CMP, and CRMF APIs (http://www.bouncycastle.org/java.html) org.bouncycastle:bcpkix-jdk15on:jar:1.54

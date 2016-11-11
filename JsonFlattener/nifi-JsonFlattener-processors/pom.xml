@@ -55,5 +55,10 @@
         	<artifactId>gson</artifactId>
         	<version>2.7</version>
         </dependency>
+        <dependency>
+        	<groupId>com.ajansing</groupId>
+        	<artifactId>NifiTools</artifactId>
+        	<version>0.0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
