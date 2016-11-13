@@ -17,7 +17,6 @@
 package com.ajansing;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +28,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
@@ -47,25 +45,27 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.io.InputStreamCallback;
 import org.apache.nifi.processor.io.OutputStreamCallback;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-@Tags({ "json", "flatten", "ajansing" })
+@Tags({ "json", "jsonarray", "flatten", "ajansing" })
 @CapabilityDescription("This processor flattens Jsons in the content of the "
 		+ "flow file and saves it back to the flow file.")
 @SeeAlso({})
 @ReadsAttributes({ @ReadsAttribute(attribute = "", description = "") })
 @WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
 public class JsonFlattener extends AbstractProcessor {
-
+	final Logger log = LoggerFactory.getLogger(JsonFlattener.class);
 	final NifiTools nt = new NifiTools();
-	
+	final Gson gson = new Gson();
+
 	public static final PropertyDescriptor SEP = new PropertyDescriptor.Builder().name("Flattening delimeter")
 			.description("This is the delimeter to be used to signify where the Json was flattened. i.e. "
 					+ "first:{second... turns into first.second when the delimeter is \".\".")
@@ -120,38 +120,39 @@ public class JsonFlattener extends AbstractProcessor {
 
 		String delim = context.getProperty(SEP).getValue();
 
-		final ComponentLog logger = getLogger();
-		try{
+		try {
 			JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
-			if(originalJson.isJsonArray()){
-				//TODO
-			} else if(originalJson.isJsonObject()){				
+			if (originalJson.isJsonArray()) {
+				JsonArray ja = flattenJsonArray(originalJson.getAsJsonArray(), delim);
+				done(originalJson, ja, flowFile, session);
+			} else if (originalJson.isJsonObject()) {
 				JsonObject flattenedJson = flattenJson(originalJson.getAsJsonObject(), delim);
-				flowFile = writeFlowFile(flowFile, session, originalJson.getAsJsonObject());
-				session.transfer(flowFile, ORIGINAL);
-				FlowFile flat = writeFlowFile(session.create(), session, flattenedJson);
-				session.transfer(flat, FLATTENED);
+				done(originalJson, flattenedJson, flowFile, session);
 			}
-		} catch (Exception e){
-			logger.error("Error parsing json.", e);
+		} catch (Exception e) {
+			log.error("Error parsing json.", e);
 			session.transfer(flowFile, ERROR);
 		}
 	}
 
-	private FlowFile writeFlowFile(FlowFile flowFile, ProcessSession session, JsonObject originalJson) {
-		return session.write(flowFile, new OutputStreamCallback() {
-			@Override
-			public void process(OutputStream out) throws IOException {
-				Gson gson = new Gson();
-				out.write(gson.toJson(originalJson).getBytes());
-			}
-		});
+	private void done(JsonElement originalJson, JsonElement jsonElement, FlowFile flowFile, ProcessSession session) {
+		flowFile = writeFlowFile(flowFile, session, originalJson);
+		session.transfer(flowFile, ORIGINAL);
+		FlowFile flat = writeFlowFile(session.create(), session, jsonElement);
+		session.transfer(flat, FLATTENED);
+	}
+
+	private JsonArray flattenJsonArray(JsonArray asJsonArray, String delim) {
+		for (int i = 0; i < asJsonArray.size(); i++) {
+			JsonObject json = flattenJson(asJsonArray.get(i).getAsJsonObject(), delim);
+			asJsonArray.set(i, json);
+		}
+		return asJsonArray;
 	}
 
 	private JsonObject flattenJson(JsonObject originalJson, String delim) {
 		Map<String, Object> target = new HashMap<>();
-		Iterator<Entry<String, JsonElement>> it1 = originalJson.entrySet().iterator();
-		target = flattenElements(target, it1, delim);
+		target = flattenElements(target, originalJson.entrySet().iterator(), delim);
 		Iterator<Entry<String, Object>> it2 = target.entrySet().iterator();
 		JsonObject json = new JsonObject();
 		Gson gson = new Gson();
@@ -162,13 +163,36 @@ public class JsonFlattener extends AbstractProcessor {
 		return json;
 	}
 
-	private Map<String, Object> flattenElements(Map<String, Object> target, Iterator<Entry<String, JsonElement>> it, String delim) {
+	private FlowFile writeFlowFile(FlowFile flowFile, ProcessSession session, JsonElement originalJson) {
+		return session.write(flowFile, new OutputStreamCallback() {
+			@Override
+			public void process(OutputStream out) throws IOException {
+				out.write(gson.toJson(originalJson).getBytes());
+			}
+		});
+	}
+
+	private Map<String, Object> flattenElements(Map<String, Object> target, Iterator<Entry<String, JsonElement>> it,
+			String delim) {
 		while (it.hasNext()) {
 			Entry<String, JsonElement> token = it.next();
+			log.info(gson.toJson(token.getValue()));
 			if (token.getValue().isJsonObject()) {
 				Map<String, Object> subjson = new HashMap<>();
 				subjson = flattenElements(subjson, token.getValue().getAsJsonObject().entrySet().iterator(), delim);
 				target = mergeMaps(target, subjson, token.getKey(), delim);
+			} else if (token.getValue().isJsonArray()) {
+				JsonArray ja = token.getValue().getAsJsonArray();
+				for (int jaIndex = 0; jaIndex < ja.size(); jaIndex++) {
+					JsonObject json = prependIndexToNames(ja.get(jaIndex).getAsJsonObject().entrySet(), jaIndex, delim);
+					ja.set(jaIndex, flattenJson(json, delim));
+				}
+				for (int jaIndex = 0; jaIndex < ja.size(); jaIndex++) {
+					Set<Entry<String, JsonElement>> jObj = ja.get(jaIndex).getAsJsonObject().entrySet();
+					for (Entry<String, JsonElement> entry : jObj) {
+						target.put(token.getKey() + delim + entry.getKey() + delim, entry.getValue());
+					}
+				}
 			} else {
 				target.put(token.getKey(), token.getValue());
 			}
@@ -176,7 +200,16 @@ public class JsonFlattener extends AbstractProcessor {
 		return target;
 	}
 
-	private Map<String, Object> mergeMaps(Map<String, Object> target, Map<String, Object> source, String prepender, String delim) {
+	private JsonObject prependIndexToNames(Set<Entry<String, JsonElement>> entrySet, int jaIndex, String delim) {
+		JsonObject json = new JsonObject();
+		for (Entry<String, JsonElement> entry : entrySet) {
+			json.add(jaIndex + delim + entry.getKey(), entry.getValue());
+		}
+		return json;
+	}
+
+	private Map<String, Object> mergeMaps(Map<String, Object> target, Map<String, Object> source, String prepender,
+			String delim) {
 		Iterator<Entry<String, Object>> it = source.entrySet().iterator();
 		while (it.hasNext()) {
 			Entry<String, Object> next = it.next();
@@ -185,17 +218,4 @@ public class JsonFlattener extends AbstractProcessor {
 		return target;
 	}
 
-	private JsonObject getJson(FlowFile flowFile, ProcessSession session, Gson gson) {
-		final StringBuilder builder = new StringBuilder();
-		JsonParser jp = new JsonParser();
-		session.read(flowFile, new InputStreamCallback() {
-
-			@SuppressWarnings("deprecation")
-			@Override
-			public void process(InputStream in) throws IOException {
-				builder.append(IOUtils.toString(in));
-			}
-		});
-		return jp.parse(builder.toString().replaceAll("\n", "").replaceAll("\t", "")).getAsJsonObject();
-	}
 }
