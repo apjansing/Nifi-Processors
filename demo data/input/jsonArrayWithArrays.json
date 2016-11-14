@@ -1,0 +1,19 @@
+[{
+	"name":"Alex",
+	"residencies":
+		{
+			"states": ["SC","NY"],
+			"city": ["Columbia", "Clinton"],
+			"ageMovedTo": [0,3]
+		}
+},
+{
+	"name":"Kevin",
+	"residencies":
+		{
+			"states": ["NY"],
+			"city": ["Cow Country", "Rome"],
+			"ageMovedTo": [0,22]
+		}
+}
+]

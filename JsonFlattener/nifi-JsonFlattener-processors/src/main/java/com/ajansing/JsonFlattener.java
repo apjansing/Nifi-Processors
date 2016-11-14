@@ -183,15 +183,25 @@ public class JsonFlattener extends AbstractProcessor {
 				target = mergeMaps(target, subjson, token.getKey(), delim);
 			} else if (token.getValue().isJsonArray()) {
 				JsonArray ja = token.getValue().getAsJsonArray();
+				boolean array = false;
 				for (int jaIndex = 0; jaIndex < ja.size(); jaIndex++) {
-					JsonObject json = prependIndexToNames(ja.get(jaIndex).getAsJsonObject().entrySet(), jaIndex, delim);
-					ja.set(jaIndex, flattenJson(json, delim));
+					try{
+						JsonObject json = prependIndexToNames(ja.get(jaIndex).getAsJsonObject().entrySet(), jaIndex, delim);
+						ja.set(jaIndex, flattenJson(json, delim));						
+					}catch(IllegalStateException e){
+						array = true;
+						break;
+					}
 				}
+				if(!array){
 				for (int jaIndex = 0; jaIndex < ja.size(); jaIndex++) {
 					Set<Entry<String, JsonElement>> jObj = ja.get(jaIndex).getAsJsonObject().entrySet();
 					for (Entry<String, JsonElement> entry : jObj) {
-						target.put(token.getKey() + delim + entry.getKey() + delim, entry.getValue());
+						target.put(token.getKey() + delim + entry.getKey(), entry.getValue());
 					}
+				}
+				} else {
+					target.put(token.getKey(), ja);
 				}
 			} else {
 				target.put(token.getKey(), token.getValue());
