@@ -17,36 +17,53 @@ public class JsonFlattener {
 
 	Logger log;
 	final Gson gson = new Gson();
-	static private JsonElement json;
+	private JsonObject json;
+	private JsonArray jsonArray;
+	
+	private String delim;
 
-	public JsonFlattener(JsonArray originalJsonArray, String delim, Logger log) {
+	public JsonFlattener(JsonArray jsonArray, String delim, Logger log) {
 		setLog(log);
-		setJson(flattenJsonArray(originalJsonArray, delim));
+		setDelim(delim);
+		setJsonArray(jsonArray);
+		flattenJsonArray();
 	}
 	
+
 	public JsonFlattener(JsonObject originalJson, String delim, Logger log) {
 		setJson(flattenJson(originalJson, delim));
 		setLog(log);
 	}
 	
-	public JsonElement getJson() {
+	private void setJsonArray(JsonArray jsonArray) {
+		this.jsonArray = jsonArray;
+	}
+	
+	private void setDelim(String delim) {
+		this.delim = delim;
+	}
+	
+	public JsonObject getJson() {
 		return json;
 	}
 	
-	public static void setJson(JsonElement json) {
-		JsonFlattener.json = json;
+	public JsonArray getJsonArray() {
+		return jsonArray;
+	}
+	
+	private void setJson(JsonObject json) {
+		this.json = json;
 	}
 
 	private void setLog(Logger log) {
 		this.log = log;
 	}
 
-	protected JsonArray flattenJsonArray(JsonArray originalJsonArray, String delim) {
-		for (int i = 0; i < originalJsonArray.size(); i++) {
-			JsonObject json = flattenJson(originalJsonArray.get(i).getAsJsonObject(), delim);
-			originalJsonArray.set(i, json);
+	protected void flattenJsonArray() {
+		for (int i = 0; i < jsonArray.size(); i++) {
+			JsonObject json = flattenJson(jsonArray.get(i).getAsJsonObject(), delim);
+			jsonArray.set(i, json);
 		}
-		return originalJsonArray;
 	}
 
 	protected JsonObject flattenJson(JsonObject originalJson, String delim) {
@@ -66,7 +83,7 @@ public class JsonFlattener {
 			String delim) {
 		while (it.hasNext()) {
 			Entry<String, JsonElement> token = it.next();
-			log.info(gson.toJson(token.getValue()));
+//			log.info(token.getKey());
 			if (token.getValue().isJsonObject()) {
 				Map<String, Object> subjson = new HashMap<>();
 				subjson = flattenElements(subjson, token.getValue().getAsJsonObject().entrySet().iterator(), delim);

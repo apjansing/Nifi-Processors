@@ -136,9 +136,10 @@ public class JsonFlattener extends AbstractProcessor {
 	}
 
 	private void done(JsonElement originalJson, JsonElement jsonElement, FlowFile flowFile, ProcessSession session) {
+		FlowFile flat = session.clone(flowFile); //cloning to ensure persistence of flowFile's attributes in flat
 		flowFile = writeFlowFile(flowFile, session, originalJson);
 		session.transfer(flowFile, ORIGINAL);
-		FlowFile flat = writeFlowFile(session.create(), session, jsonElement);
+		flat = writeFlowFile(session.create(), session, jsonElement);
 		session.transfer(flat, FLATTENED);
 	}
 

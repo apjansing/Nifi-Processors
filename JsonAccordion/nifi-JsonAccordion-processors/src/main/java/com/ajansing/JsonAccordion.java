@@ -132,31 +132,43 @@ public class JsonAccordion extends AbstractProcessor {
 
 	private void compress(FlowFile flowFile, ProcessSession session, String delim) {
 		JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
-		JsonCompresser je = null;
+		log.info(String.valueOf(originalJson.isJsonArray()));
 		if (originalJson.isJsonArray()) {
-			
+			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonArray(), delim, log);
+			log.info(gson.toJson(jc.getJson()));
+			JsonElement flattenedJson = jc.getJson();
+			done(originalJson, flattenedJson, flowFile, session);
 		}else if (originalJson.isJsonObject()) {
-			
+			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonObject(), delim, log);	
+			log.info(gson.toJson(jc.getJson()));
+			JsonElement flattenedJson = jc.getJson();
+			done(originalJson, flattenedJson, flowFile, session);
+
 		}
 	}
 
 	private void flatten(FlowFile flowFile, ProcessSession session, String delim) {
 		JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
-		JsonFlattener jf = null;
 		if (originalJson.isJsonArray()) {
-			jf = new JsonFlattener(originalJson.getAsJsonArray(), delim, log);
+			JsonFlattener jf = new JsonFlattener(originalJson.getAsJsonArray(), delim, log);
+			JsonArray flattenedJson = jf.getJsonArray();
+			log.info(originalJson.toString());
+			log.info(flattenedJson.getAsString());
 
+			done(originalJson, flattenedJson, flowFile, session);
 		} else if (originalJson.isJsonObject()) {
-			jf = new JsonFlattener(originalJson.getAsJsonObject(), delim, log);
+			JsonFlattener jf = new JsonFlattener(originalJson.getAsJsonObject(), delim, log);
+			JsonObject flattenedJson = jf.getJson();
+			log.info(flattenedJson.toString());
+			done(originalJson, flattenedJson, flowFile, session);
 		}
-		JsonElement flattenedJson = jf.getJson();
-		done(originalJson, flattenedJson, flowFile, session);
 	}
 
 	private void done(JsonElement originalJson, JsonElement flattenedJson, FlowFile flowFile, ProcessSession session) {
+		FlowFile flat = session.clone(flowFile);
 		flowFile = nt.writeFlowFile(flowFile, session, originalJson);
 		session.transfer(flowFile, ORIGINAL);
-		FlowFile flat = nt.writeFlowFile(flowFile, session, flattenedJson);
+		flat = nt.writeFlowFile(flat, session, flattenedJson);
 		session.transfer(flat, FLATTENED);
 	}
 
