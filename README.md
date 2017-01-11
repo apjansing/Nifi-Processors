@@ -7,4 +7,4 @@ Create issues if you want a processor made or for improvements you think I shoul
 
 Current processors are:
 JsonFlattener - Functioning.
-JsonAccordion - 25% functional (can flatten basic Jsons).
+JsonAccordion - 50% functional -- only Flattening has been confirmed to work, but the basis of the code for recompression is there
