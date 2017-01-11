@@ -22,11 +22,11 @@ public class JsonFlattener {
 	
 	private String delim;
 
-	public JsonFlattener(JsonArray jsonArray, String delim, Logger log) {
+	public JsonFlattener(JsonArray originalJsonArray, String delim, Logger log) {
 		setLog(log);
 		setDelim(delim);
-		setJsonArray(jsonArray);
-		flattenJsonArray();
+//		setJsonArray(jsonArray);
+		setJsonArray(flattenJsonArray(originalJsonArray));
 	}
 	
 
@@ -59,11 +59,14 @@ public class JsonFlattener {
 		this.log = log;
 	}
 
-	protected void flattenJsonArray() {
-		for (int i = 0; i < jsonArray.size(); i++) {
-			JsonObject json = flattenJson(jsonArray.get(i).getAsJsonObject(), delim);
-			jsonArray.set(i, json);
+	protected JsonArray flattenJsonArray(JsonArray originalJsonArray) {
+		JsonArray ja = new JsonArray();
+		ja = originalJsonArray.getAsJsonArray();
+		for (int i = 0; i < originalJsonArray.size(); i++) {
+			JsonObject json = flattenJson(originalJsonArray.get(i).getAsJsonObject(), delim);
+			ja.set(i, json);
 		}
+		return ja;
 	}
 
 	protected JsonObject flattenJson(JsonObject originalJson, String delim) {

@@ -1,0 +1,9 @@
+{
+	"name":"Alex",
+	"residencies":
+		{
+			"states": ["SC","NY"],
+			"city": ["Columbia", "Clinton"],
+			"ageMovedTo": [0,3]
+		}
+}

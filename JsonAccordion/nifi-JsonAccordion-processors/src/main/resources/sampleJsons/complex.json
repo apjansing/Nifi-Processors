@@ -1,0 +1,50 @@
+[
+{
+	"name":"Alex",
+	"residencies":[
+		{
+			"state":"SC",
+			"city":"Columbia"
+		},
+		{
+			"state":"NY",
+			"city":"New York Mills"
+		}
+	]
+},
+{
+	"name":"Kevin",
+	"residencies":[
+		{
+			"state":"NY",
+			"city":"Cow Country"
+		},
+		{
+			"state":"NY",
+			"city":"Rome"
+		}
+	]
+},
+{
+	"name":"Carrie",
+	"residencies":[
+		{
+			"state":"NY",
+			"city":"Hollond Patent"
+		},
+		{
+			"state":"NY",
+			"city":"Rome"
+		}
+	]
+},
+{
+	"name":"Suzanne",
+	"residencies":[
+		{
+			"state":"NY",
+			"city":"Hannibal"
+		}
+	]
+}
+]

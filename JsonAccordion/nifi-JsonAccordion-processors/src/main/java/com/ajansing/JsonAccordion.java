@@ -153,7 +153,7 @@ public class JsonAccordion extends AbstractProcessor {
 			JsonFlattener jf = new JsonFlattener(originalJson.getAsJsonArray(), delim, log);
 			JsonArray flattenedJson = jf.getJsonArray();
 			log.info(originalJson.toString());
-			log.info(flattenedJson.getAsString());
+			log.info(flattenedJson.toString());
 
 			done(originalJson, flattenedJson, flowFile, session);
 		} else if (originalJson.isJsonObject()) {
