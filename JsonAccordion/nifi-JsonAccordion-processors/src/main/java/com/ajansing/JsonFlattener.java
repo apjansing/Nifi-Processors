@@ -12,11 +12,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class JsonFlattener {
 
 	Logger log;
 	final Gson gson = new Gson();
+	final JsonParser jp = new JsonParser();
 	private JsonObject json;
 	private JsonArray jsonArray;
 	
@@ -25,7 +27,6 @@ public class JsonFlattener {
 	public JsonFlattener(JsonArray originalJsonArray, String delim, Logger log) {
 		setLog(log);
 		setDelim(delim);
-//		setJsonArray(jsonArray);
 		setJsonArray(flattenJsonArray(originalJsonArray));
 	}
 	
@@ -60,8 +61,10 @@ public class JsonFlattener {
 	}
 
 	protected JsonArray flattenJsonArray(JsonArray originalJsonArray) {
-		JsonArray ja = new JsonArray();
-		ja = originalJsonArray.getAsJsonArray();
+		/*
+		 * NEXT LINE : fixed a problem I have. Probably a more efficient way of keeping classes creating this class from updating their JsonArrays, but I couldn't think of one right away
+		 */
+		JsonArray ja = jp.parse(originalJsonArray.toString()).getAsJsonArray(); 
 		for (int i = 0; i < originalJsonArray.size(); i++) {
 			JsonObject json = flattenJson(originalJsonArray.get(i).getAsJsonObject(), delim);
 			ja.set(i, json);

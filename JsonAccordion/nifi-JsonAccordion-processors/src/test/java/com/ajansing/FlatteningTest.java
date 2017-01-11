@@ -29,8 +29,9 @@ public class FlatteningTest {
 	}
 	
 	
-	  private static void getJson(String resrouce) {
-		  JsonElement elem = jp.parse(new FlatteningTest().getFile(resrouce));
+	  private static void getJson(String ressource) {
+		  JsonElement elem = jp.parse(new FlatteningTest().getFile(ressource));
+		  System.out.println(elem);
 		  System.out.println(elem);
 		  if(elem.isJsonObject()){
 			  JsonObject json = elem.getAsJsonObject();			  
