@@ -5,6 +5,6 @@ The processors provided here will use my [Nifi-Tools](https://github.com/apjansi
 
 Create issues if you want a processor made or for improvements you think I should make to existing processors.
 
-Current processors are:
-JsonFlattener - Functioning.
-JsonAccordion - 50% functional -- only Flattening has been confirmed to work, but the basis of the code for recompression is there
+Current processors are:\n
+JsonFlattener - Functioning.\n
+JsonAccordion - Functioning.
