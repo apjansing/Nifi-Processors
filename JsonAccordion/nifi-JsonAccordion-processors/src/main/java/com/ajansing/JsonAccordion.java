@@ -38,6 +38,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -51,7 +52,7 @@ import java.util.Map.Entry;
 @WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
 public class JsonAccordion extends AbstractProcessor {
 
-	final Logger log = LoggerFactory.getLogger(JsonAccordion.class);
+	final Logger logger = LoggerFactory.getLogger(JsonAccordion.class);
 	final NifiTools nt = new NifiTools();
 	final Gson gson = new Gson();
 
@@ -125,22 +126,22 @@ public class JsonAccordion extends AbstractProcessor {
 				break;
 			}
 		} catch (Exception e) {
-			log.error("Error parsing json.", e);
+			logger.error("Error parsing json.", e);
 			session.transfer(flowFile, ERROR);
 		}
 	}
 
 	private void compress(FlowFile flowFile, ProcessSession session, String delim) {
 		JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
-		log.info(String.valueOf(originalJson.isJsonArray()));
+		logger.info(String.valueOf(originalJson.isJsonArray()));
 		if (originalJson.isJsonArray()) {
-			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonArray(), delim, log);
-			log.info(gson.toJson(jc.getJson()));
+			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonArray(), delim, logger);
+			logger.info(gson.toJson(jc.getJson()));
 			JsonElement flattenedJson = jc.getJson();
 			done(originalJson, flattenedJson, flowFile, session);
 		}else if (originalJson.isJsonObject()) {
-			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonObject(), delim, log);	
-			log.info(gson.toJson(jc.getJson()));
+			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonObject(), delim, logger);	
+			logger.info(gson.toJson(jc.getJson()));
 			JsonElement flattenedJson = jc.getJson();
 			done(originalJson, flattenedJson, flowFile, session);
 
@@ -148,18 +149,20 @@ public class JsonAccordion extends AbstractProcessor {
 	}
 
 	private void flatten(FlowFile flowFile, ProcessSession session, String delim) {
-		JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
-		if (originalJson.isJsonArray()) {
-			JsonFlattener jf = new JsonFlattener(originalJson.getAsJsonArray(), delim, log);
-			JsonArray flattenedJson = jf.getJsonArray();
-			log.info(originalJson.toString());
-			log.info(flattenedJson.toString());
-
+		String resource = nt.readAsString(flowFile, session);
+		JsonParser jp = new JsonParser();
+		JsonElement elem = jp.parse(resource);
+		
+		if (elem.isJsonObject()) {
+			JsonObject originalJson = elem.getAsJsonObject();
+			JsonObject flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonObject(), ".", logger).getJson();
+			logger.info(flattenedJson.toString());
 			done(originalJson, flattenedJson, flowFile, session);
-		} else if (originalJson.isJsonObject()) {
-			JsonFlattener jf = new JsonFlattener(originalJson.getAsJsonObject(), delim, log);
-			JsonObject flattenedJson = jf.getJson();
-			log.info(flattenedJson.toString());
+		} else {
+			JsonArray originalJson = elem.getAsJsonArray();
+			JsonArray flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonArray(), ".", logger).getJsonArray();
+			logger.info(gson.toJson(originalJson));
+			logger.info(gson.toJson(flattenedJson));
 			done(originalJson, flattenedJson, flowFile, session);
 		}
 	}

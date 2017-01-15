@@ -22,33 +22,29 @@ public class FlatteningTest {
 		
 		
 		getJson("sampleJsons/basic.json");
-		getJson("sampleJsons/complex.json");
 		getJson("sampleJsons/arrays.json");
 		getJson("sampleJsons/jsonArrayWithArrays.json");
+		getJson("sampleJsons/complex.json");
+
 		
 	}
 	
 	
 	  private static void getJson(String ressource) {
 		  JsonElement elem = jp.parse(new FlatteningTest().getFile(ressource));
-		  System.out.println(elem);
-		  System.out.println(elem);
+		  Logger logger = LoggerFactory.getLogger(FlatteningTest.class);
 		  if(elem.isJsonObject()){
-			  JsonObject json = elem.getAsJsonObject();			  
-			  Logger logger = LoggerFactory.getLogger(FlatteningTest.class);
-			  JsonFlattener jf = new JsonFlattener(json, ".", logger);
-			  System.out.println(gson.toJson(json));
-			  System.out.println(gson.toJson(jf.getJson()));
-			  System.out.println("-------------");
+			  JsonObject json = elem.getAsJsonObject();
+			  JsonObject J = new JsonFlattener(json, ".", logger).getJson();
+			  System.out.println(json);
+			  System.out.println(J);
 		  } else {
 			  JsonArray json = elem.getAsJsonArray();
-			  String holder = gson.toJson(json);
-			  Logger logger = LoggerFactory.getLogger(FlatteningTest.class);
-			  JsonFlattener jf = new JsonFlattener(json, ".", logger);
+			  JsonArray ja = new JsonFlattener(jp.parse(new FlatteningTest().getFile(ressource)).getAsJsonArray(), ".", logger).getJsonArray();
 			  System.out.println(json);			  
-			  System.out.println(gson.toJson(jf.getJsonArray()) +" ME");
-			  System.out.println("-------------");
+			  System.out.println(ja);
 		  }
+		  System.out.println("-------------");
 		
 	}
 
