@@ -3,7 +3,6 @@ package com.ajansing;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -16,81 +15,125 @@ import com.google.gson.JsonObject;
 
 public class JsonCompresser {
 
-	Logger log;
+	Logger logger;
 	final Gson gson = new Gson();
 	private static JsonObject json;
 	private static JsonArray jsonArray;
+	private static String delim;
 
-	public JsonCompresser(JsonArray originalJsonArray, String delim, Logger log) {
+	protected JsonCompresser(JsonArray originalJsonArray, String delim, Logger log) {
 		setLog(log);
-		setJsonArray(originalJsonArray);
+		setDelim(delim);
+		setJsonArray(compressFlattenedJsonArray(originalJsonArray, delim, new JsonObject()));
 	}
 
-	public JsonCompresser(JsonObject originalJson, String delim, Logger log) {
+	protected JsonCompresser(JsonObject originalJson, String delim, Logger log) {
 		setLog(log);
-		setJson(originalJson);
-		setJson(compressFlattenedJson(originalJson.entrySet(), delim, new JsonObject()));
+		setDelim(delim);
+		setJson(compressFlattenedJson(originalJson.entrySet(), new JsonObject()));
 	}
 
-	private JsonObject compressFlattenedJson(Set<Entry<String, JsonElement>> entrySet, String delim,
-			JsonObject masterJson) {
-		log.info(String.valueOf(entrySet.size()));
-		
+	private JsonArray compressFlattenedJsonArray(JsonArray originalJsonArray, String delim, JsonObject jsonObject) {
+		for (int i = 0; i < originalJsonArray.size(); i++) {
+			originalJsonArray.set(i,
+					compressFlattenedJson(originalJsonArray.get(i).getAsJsonObject().entrySet(), new JsonObject()));
+		}
+		return originalJsonArray;
+	}
+
+	private JsonObject compressFlattenedJson(Set<Entry<String, JsonElement>> entrySet, JsonObject masterJson) {
+		logger.info(String.valueOf(entrySet.size()));
+
 		Set<Entry<String, JsonElement>> group = new HashSet<>();
 		Iterator<Entry<String, JsonElement>> it = entrySet.iterator();
 		String currentSubJsonKey = "";
 		while (it.hasNext()) {
 			Entry<String, JsonElement> next = it.next();
-			if (group.size() <= 1) {
-				log.info(next.getKey() + " " + delim);
-				log.info(String.valueOf(next.getKey().contains(delim)));
-				log.info(String.valueOf(next.getKey().split(Pattern.quote(delim)).length));
-
+			if (group.size() < 1) {
+				logger.info(next.getKey() + " " + delim);
 				currentSubJsonKey = next.getKey().split(Pattern.quote(delim))[0];
-				try{
-					group.add(next);				
-				} catch(NoSuchElementException e){
-					break;
-				}
+				group.add(next);
 			} else {
 				String[] key = next.getKey().split(Pattern.quote(delim));
-				log.info("Current SubJson Key " + currentSubJsonKey);
+//				logger.info("Current SubJson Key " + currentSubJsonKey);
 				if (key[0].equals(currentSubJsonKey)) {
-					log.info("MATCHED " + next.getKey());
+					logger.info("MATCHED " + next.getKey());
 					group.add(next);
 				}
 			}
 		}
+
+//		logger.info("=====");
+//		printSet(group);
+//		logger.info("=====");
+
+		JsonElement currentSubJson = setToJsonObject(group);
+
+		logger.info(gson.toJson(currentSubJson));
+
+		if (checkForNesting(currentSubJson.getAsJsonObject())) {
+			currentSubJson = compressFlattenedJson(currentSubJson.getAsJsonObject().entrySet(), new JsonObject());
+		}
 		
-		log.info("=====");
-		printSet(group);
-		log.info("=====");
-		
-		JsonObject currentSubJson = setToJsonObject(group, delim);
-		
-		log.info(gson.toJson(currentSubJson));
+		if(jsonArrayP(currentSubJson.getAsJsonObject())){
+			currentSubJson = toJsonArray(currentSubJson);
+		}
 		
 		masterJson.add(currentSubJsonKey, currentSubJson);
 
-		log.info(gson.toJson(masterJson));
+		logger.info(gson.toJson(masterJson));
 		entrySet = removeSubset(entrySet, group);
-
-		if (entrySet.size() > 0 && group.size() != 0) {
-			masterJson = compressFlattenedJson(entrySet, delim, masterJson);
+		if (group.size() == 1 && !group.iterator().next().getKey().contains(delim)) {
+			Entry<String, JsonElement> token = group.iterator().next();
+			masterJson.add(token.getKey(), token.getValue());
+		} else {
+			if (entrySet.size() > 0 && group.size() != 0) {
+				masterJson = compressFlattenedJson(entrySet, masterJson);
+			}
 		}
 		return masterJson;
+	}
 
+	private JsonElement toJsonArray(JsonElement currentSubJson) {
+		JsonArray ja = new JsonArray();
+		Iterator<Entry<String, JsonElement>> it = currentSubJson.getAsJsonObject().entrySet().iterator();
+		while(it.hasNext()){
+			ja.add(it.next().getValue());
+		}
+		return ja;
+	}
+
+	private boolean jsonArrayP(JsonObject currentSubJson) {
+		Set<Entry<String, JsonElement>> keys = currentSubJson.entrySet();
+		for (Entry<String, JsonElement> k : keys) {
+			try{
+				Integer.parseInt(k.getKey());
+			} catch (NumberFormatException | NullPointerException e){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean checkForNesting(JsonObject currentSubJson) {
+		Set<Entry<String, JsonElement>> keys = currentSubJson.entrySet();
+		for (Entry<String, JsonElement> k : keys) {
+			if (k.getKey().contains(delim)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void printSet(Set<Entry<String, JsonElement>> group) {
-		for(Entry<String, JsonElement> g : group)
-			log.info(g.getKey() + " " + g.getValue());
+		for (Entry<String, JsonElement> g : group)
+			logger.info(g.getKey() + " " + g.getValue());
 	}
 
 	private Set<Entry<String, JsonElement>> removeSubset(Set<Entry<String, JsonElement>> entrySet,
 			Set<Entry<String, JsonElement>> group) {
 		for (Entry<String, JsonElement> g : group) {
-			log.info(g.getKey());
+			logger.info(g.getKey());
 			entrySet = checkAndRemove(g, entrySet);
 		}
 		return entrySet;
@@ -107,7 +150,7 @@ public class JsonCompresser {
 		return entrySet;
 	}
 
-	private JsonObject setToJsonObject(Set<Entry<String, JsonElement>> group, String delim) {
+	private JsonObject setToJsonObject(Set<Entry<String, JsonElement>> group) {
 		JsonObject J = new JsonObject();
 		for (Entry<String, JsonElement> g : group) {
 			if (g.getKey().contains(delim)) {
@@ -119,23 +162,31 @@ public class JsonCompresser {
 	}
 
 	private void setLog(Logger log) {
-		this.log = log;
+		this.logger = log;
 	}
 
-	public static JsonObject getJson() {
+	public JsonObject getJson() {
 		return json;
 	}
 
-	public static void setJson(JsonObject json) {
+	public void setJson(JsonObject json) {
 		JsonCompresser.json = json;
 	}
 
-	public static JsonArray getJsonArray() {
+	public JsonArray getJsonArray() {
 		return jsonArray;
 	}
 
-	public static void setJsonArray(JsonArray jsonArray) {
+	public void setJsonArray(JsonArray jsonArray) {
 		JsonCompresser.jsonArray = jsonArray;
+	}
+
+	public void setDelim(String delim) {
+		JsonCompresser.delim = delim;
+	}
+
+	public String getDelim() {
+		return delim;
 	}
 
 }

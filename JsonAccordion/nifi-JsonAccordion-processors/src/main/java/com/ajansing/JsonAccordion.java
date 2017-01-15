@@ -56,8 +56,8 @@ public class JsonAccordion extends AbstractProcessor {
 	final NifiTools nt = new NifiTools();
 	final Gson gson = new Gson();
 
-	public static final PropertyDescriptor COMPRESSOR_FLATTEN = new PropertyDescriptor.Builder().name("Expand or flatten")
-			.allowableValues("Compress", "Flatten").defaultValue("Compress").required(true)
+	public static final PropertyDescriptor COMPRESSOR_FLATTEN = new PropertyDescriptor.Builder()
+			.name("Expand or flatten").allowableValues("Compress", "Flatten").defaultValue("Compress").required(true)
 			.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
 	public static final PropertyDescriptor SEP = new PropertyDescriptor.Builder().name("Flattening delimeter")
@@ -132,19 +132,23 @@ public class JsonAccordion extends AbstractProcessor {
 	}
 
 	private void compress(FlowFile flowFile, ProcessSession session, String delim) {
-		JsonElement originalJson = nt.readAsJsonElement(flowFile, session);
-		logger.info(String.valueOf(originalJson.isJsonArray()));
-		if (originalJson.isJsonArray()) {
-			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonArray(), delim, logger);
-			logger.info(gson.toJson(jc.getJson()));
-			JsonElement flattenedJson = jc.getJson();
-			done(originalJson, flattenedJson, flowFile, session);
-		}else if (originalJson.isJsonObject()) {
-			JsonCompresser jc = new JsonCompresser(originalJson.getAsJsonObject(), delim, logger);	
-			logger.info(gson.toJson(jc.getJson()));
-			JsonElement flattenedJson = jc.getJson();
-			done(originalJson, flattenedJson, flowFile, session);
+		String resource = nt.readAsString(flowFile, session);
+		JsonParser jp = new JsonParser();
+		JsonElement elem = jp.parse(resource);
 
+		if (elem.isJsonObject()) {
+			JsonObject originalJson = elem.getAsJsonObject();
+			JsonObject compressedJson = new JsonCompresser(jp.parse(resource).getAsJsonObject(), delim, logger)
+					.getJson();
+			logger.info(compressedJson.toString());
+			done(originalJson, compressedJson, flowFile, session);
+		} else {
+			JsonArray originalJson = elem.getAsJsonArray();			
+			JsonArray flattenedJson = new JsonCompresser(jp.parse(resource).getAsJsonArray(), delim, logger)
+					.getJsonArray();
+			logger.info(gson.toJson(originalJson));
+			logger.info(gson.toJson(flattenedJson));
+			done(originalJson, flattenedJson, flowFile, session);
 		}
 	}
 
@@ -152,7 +156,7 @@ public class JsonAccordion extends AbstractProcessor {
 		String resource = nt.readAsString(flowFile, session);
 		JsonParser jp = new JsonParser();
 		JsonElement elem = jp.parse(resource);
-		
+
 		if (elem.isJsonObject()) {
 			JsonObject originalJson = elem.getAsJsonObject();
 			JsonObject flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonObject(), ".", logger).getJson();
@@ -160,7 +164,8 @@ public class JsonAccordion extends AbstractProcessor {
 			done(originalJson, flattenedJson, flowFile, session);
 		} else {
 			JsonArray originalJson = elem.getAsJsonArray();
-			JsonArray flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonArray(), ".", logger).getJsonArray();
+			JsonArray flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonArray(), ".", logger)
+					.getJsonArray();
 			logger.info(gson.toJson(originalJson));
 			logger.info(gson.toJson(flattenedJson));
 			done(originalJson, flattenedJson, flowFile, session);

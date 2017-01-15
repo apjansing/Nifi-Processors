@@ -69,7 +69,7 @@ public class CompresserTest {
 			  System.out.println(J.getJson());
 		  } else {
 			  JsonArray json = elem.getAsJsonArray();
-			  JsonArray ja = new JsonFlattener(jp.parse(new CompresserTest().getFile(ressource)).getAsJsonArray(), ".", logger).getJsonArray();
+			  JsonArray ja = new JsonCompresser(jp.parse(new CompresserTest().getFile(ressource)).getAsJsonArray(), ".", logger).getJsonArray();
 			  System.out.println(json);			  
 			  System.out.println(ja);
 		  }
