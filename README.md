@@ -6,5 +6,5 @@ The processors provided here will use my [Nifi-Tools](https://github.com/apjansi
 Create issues if you want a processor made or for improvements you think I should make to existing processors.
 
 Current processors are:\n
-JsonFlattener - Functioning.\n
+JsonFlattener - Functioning.\r
 JsonAccordion - Functioning.
