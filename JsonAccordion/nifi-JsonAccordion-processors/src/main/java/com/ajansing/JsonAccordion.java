@@ -16,20 +16,28 @@
  */
 package com.ajansing;
 
-import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.PropertyValue;
-import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.processor.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.behavior.WritesAttributes;
-import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.annotation.lifecycle.OnScheduled;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.processor.AbstractProcessor;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.io.OutputStreamCallback;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,11 +47,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.*;
-import java.util.Map.Entry;
 
 @Tags({ "json", "jsonarray", "flatten", "expand", "ajansing" })
 @CapabilityDescription("Provide a description")
@@ -140,14 +143,11 @@ public class JsonAccordion extends AbstractProcessor {
 			JsonObject originalJson = elem.getAsJsonObject();
 			JsonObject compressedJson = new JsonCompresser(jp.parse(resource).getAsJsonObject(), delim, logger)
 					.getJson();
-			logger.info(compressedJson.toString());
 			done(originalJson, compressedJson, flowFile, session);
 		} else {
-			JsonArray originalJson = elem.getAsJsonArray();			
+			JsonArray originalJson = elem.getAsJsonArray();
 			JsonArray flattenedJson = new JsonCompresser(jp.parse(resource).getAsJsonArray(), delim, logger)
 					.getJsonArray();
-			logger.info(gson.toJson(originalJson));
-			logger.info(gson.toJson(flattenedJson));
 			done(originalJson, flattenedJson, flowFile, session);
 		}
 	}
@@ -160,14 +160,11 @@ public class JsonAccordion extends AbstractProcessor {
 		if (elem.isJsonObject()) {
 			JsonObject originalJson = elem.getAsJsonObject();
 			JsonObject flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonObject(), ".", logger).getJson();
-			logger.info(flattenedJson.toString());
 			done(originalJson, flattenedJson, flowFile, session);
 		} else {
 			JsonArray originalJson = elem.getAsJsonArray();
 			JsonArray flattenedJson = new JsonFlattener(jp.parse(resource).getAsJsonArray(), ".", logger)
 					.getJsonArray();
-			logger.info(gson.toJson(originalJson));
-			logger.info(gson.toJson(flattenedJson));
 			done(originalJson, flattenedJson, flowFile, session);
 		}
 	}

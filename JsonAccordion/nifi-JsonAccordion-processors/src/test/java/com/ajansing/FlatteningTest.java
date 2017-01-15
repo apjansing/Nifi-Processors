@@ -19,59 +19,56 @@ public class FlatteningTest {
 	static JsonParser jp = new JsonParser();
 
 	public static void main(String[] args) {
-		
-		
+
 		getJson("sampleJsons/basic.json");
 		getJson("sampleJsons/arrays.json");
 		getJson("sampleJsons/jsonArrayWithArrays.json");
 		getJson("sampleJsons/complex.json");
 
-		
-	}
-	
-	
-	  private static void getJson(String ressource) {
-		  JsonElement elem = jp.parse(new FlatteningTest().getFile(ressource));
-		  Logger logger = LoggerFactory.getLogger(FlatteningTest.class);
-		  if(elem.isJsonObject()){
-			  JsonObject json = elem.getAsJsonObject();
-			  JsonObject J = new JsonFlattener(json, ".", logger).getJson();
-			  System.out.println(json);
-			  System.out.println(J);
-		  } else {
-			  JsonArray json = elem.getAsJsonArray();
-			  JsonArray ja = new JsonFlattener(jp.parse(new FlatteningTest().getFile(ressource)).getAsJsonArray(), ".", logger).getJsonArray();
-			  System.out.println(json);			  
-			  System.out.println(ja);
-		  }
-		  System.out.println("-------------");
-		
 	}
 
+	private static void getJson(String ressource) {
+		JsonElement elem = jp.parse(new FlatteningTest().getFile(ressource));
+		Logger logger = LoggerFactory.getLogger(FlatteningTest.class);
+		if (elem.isJsonObject()) {
+			JsonObject json = elem.getAsJsonObject();
+			JsonObject J = new JsonFlattener(json, ".", logger).getJson();
+			System.out.println(json);
+			System.out.println(J);
+		} else {
+			JsonArray json = elem.getAsJsonArray();
+			JsonArray ja = new JsonFlattener(jp.parse(new FlatteningTest().getFile(ressource)).getAsJsonArray(), ".",
+					logger).getJsonArray();
+			System.out.println(json);
+			System.out.println(ja);
+		}
+		System.out.println("-------------");
+
+	}
 
 	private String getFile(String fileName) {
 
-			StringBuilder result = new StringBuilder("");
+		StringBuilder result = new StringBuilder("");
 
-			//Get file from resources folder
-			ClassLoader classLoader = getClass().getClassLoader();
-			File file = new File(classLoader.getResource(fileName).getFile());
+		// Get file from resources folder
+		ClassLoader classLoader = getClass().getClassLoader();
+		File file = new File(classLoader.getResource(fileName).getFile());
 
-			try (Scanner scanner = new Scanner(file)) {
+		try (Scanner scanner = new Scanner(file)) {
 
-				while (scanner.hasNextLine()) {
-					String line = scanner.nextLine();
-					result.append(line).append("\n");
-				}
-
-				scanner.close();
-
-			} catch (IOException e) {
-				e.printStackTrace();
+			while (scanner.hasNextLine()) {
+				String line = scanner.nextLine();
+				result.append(line).append("\n");
 			}
 
-			return result.toString();
+			scanner.close();
 
-		  }
-	
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return result.toString();
+
+	}
+
 }

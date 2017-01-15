@@ -21,7 +21,7 @@ public class JsonFlattener {
 	final JsonParser jp = new JsonParser();
 	private JsonObject json;
 	private JsonArray jsonArray;
-	
+
 	private String delim;
 
 	public JsonFlattener(JsonArray originalJsonArray, String delim, Logger log) {
@@ -29,29 +29,28 @@ public class JsonFlattener {
 		setDelim(delim);
 		setJsonArray(flattenJsonArray(originalJsonArray));
 	}
-	
 
 	public JsonFlattener(JsonObject originalJson, String delim, Logger log) {
 		setJson(flattenJson(originalJson, delim));
 		setLog(log);
 	}
-	
+
 	private void setJsonArray(JsonArray jsonArray) {
 		this.jsonArray = jsonArray;
 	}
-	
+
 	private void setDelim(String delim) {
 		this.delim = delim;
 	}
-	
+
 	public JsonObject getJson() {
 		return json;
 	}
-	
+
 	public JsonArray getJsonArray() {
 		return jsonArray;
 	}
-	
+
 	private void setJson(JsonObject json) {
 		this.json = json;
 	}
@@ -61,7 +60,17 @@ public class JsonFlattener {
 	}
 
 	protected JsonArray flattenJsonArray(JsonArray originalJsonArray) {
-		JsonArray ja = jp.parse(originalJsonArray.toString()).getAsJsonArray(); //fixed a prolem I have. Probably a more efficient way o
+		JsonArray ja = jp.parse(originalJsonArray.toString()).getAsJsonArray(); // fixed
+																				// a
+																				// prolem
+																				// I
+																				// have.
+																				// Probably
+																				// a
+																				// more
+																				// efficient
+																				// way
+																				// o
 		for (int i = 0; i < originalJsonArray.size(); i++) {
 			JsonObject json = flattenJson(originalJsonArray.get(i).getAsJsonObject(), delim);
 			ja.set(i, json);
@@ -86,7 +95,7 @@ public class JsonFlattener {
 			String delim) {
 		while (it.hasNext()) {
 			Entry<String, JsonElement> token = it.next();
-//			log.info(token.getKey());
+			// log.info(token.getKey());
 			if (token.getValue().isJsonObject()) {
 				Map<String, Object> subjson = new HashMap<>();
 				subjson = flattenElements(subjson, token.getValue().getAsJsonObject().entrySet().iterator(), delim);

@@ -15,7 +15,7 @@ import com.google.gson.JsonObject;
 
 public class JsonCompresser {
 
-	Logger logger;
+	private Logger logger;
 	final Gson gson = new Gson();
 	private static JsonObject json;
 	private static JsonArray jsonArray;
@@ -42,43 +42,33 @@ public class JsonCompresser {
 	}
 
 	private JsonObject compressFlattenedJson(Set<Entry<String, JsonElement>> entrySet, JsonObject masterJson) {
-		logger.info(String.valueOf(entrySet.size()));
-
 		Set<Entry<String, JsonElement>> group = new HashSet<>();
 		Iterator<Entry<String, JsonElement>> it = entrySet.iterator();
 		String currentSubJsonKey = "";
 		while (it.hasNext()) {
 			Entry<String, JsonElement> next = it.next();
 			if (group.size() < 1) {
-				logger.info(next.getKey() + " " + delim);
 				currentSubJsonKey = next.getKey().split(Pattern.quote(delim))[0];
 				group.add(next);
 			} else {
 				String[] key = next.getKey().split(Pattern.quote(delim));
-//				logger.info("Current SubJson Key " + currentSubJsonKey);
+				// logger.info("Current SubJson Key " + currentSubJsonKey);
 				if (key[0].equals(currentSubJsonKey)) {
-					logger.info("MATCHED " + next.getKey());
 					group.add(next);
 				}
 			}
 		}
 
-//		logger.info("=====");
-//		printSet(group);
-//		logger.info("=====");
-
 		JsonElement currentSubJson = setToJsonObject(group);
-
-		logger.info(gson.toJson(currentSubJson));
 
 		if (checkForNesting(currentSubJson.getAsJsonObject())) {
 			currentSubJson = compressFlattenedJson(currentSubJson.getAsJsonObject().entrySet(), new JsonObject());
 		}
-		
-		if(jsonArrayP(currentSubJson.getAsJsonObject())){
+
+		if (jsonArrayP(currentSubJson.getAsJsonObject())) {
 			currentSubJson = toJsonArray(currentSubJson);
 		}
-		
+
 		masterJson.add(currentSubJsonKey, currentSubJson);
 
 		logger.info(gson.toJson(masterJson));
@@ -97,7 +87,7 @@ public class JsonCompresser {
 	private JsonElement toJsonArray(JsonElement currentSubJson) {
 		JsonArray ja = new JsonArray();
 		Iterator<Entry<String, JsonElement>> it = currentSubJson.getAsJsonObject().entrySet().iterator();
-		while(it.hasNext()){
+		while (it.hasNext()) {
 			ja.add(it.next().getValue());
 		}
 		return ja;
@@ -106,9 +96,9 @@ public class JsonCompresser {
 	private boolean jsonArrayP(JsonObject currentSubJson) {
 		Set<Entry<String, JsonElement>> keys = currentSubJson.entrySet();
 		for (Entry<String, JsonElement> k : keys) {
-			try{
+			try {
 				Integer.parseInt(k.getKey());
-			} catch (NumberFormatException | NullPointerException e){
+			} catch (NumberFormatException | NullPointerException e) {
 				return false;
 			}
 		}
@@ -125,15 +115,9 @@ public class JsonCompresser {
 		return false;
 	}
 
-	private void printSet(Set<Entry<String, JsonElement>> group) {
-		for (Entry<String, JsonElement> g : group)
-			logger.info(g.getKey() + " " + g.getValue());
-	}
-
 	private Set<Entry<String, JsonElement>> removeSubset(Set<Entry<String, JsonElement>> entrySet,
 			Set<Entry<String, JsonElement>> group) {
 		for (Entry<String, JsonElement> g : group) {
-			logger.info(g.getKey());
 			entrySet = checkAndRemove(g, entrySet);
 		}
 		return entrySet;
