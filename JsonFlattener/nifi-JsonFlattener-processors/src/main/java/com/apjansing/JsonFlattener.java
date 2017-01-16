@@ -56,7 +56,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-@Tags({ "json", "jsonarray", "flatten", "ajansing" })
+@Tags({ "json", "jsonarray", "flatten" })
 @CapabilityDescription("This processor flattens Jsons in the content of the "
 		+ "flow file and saves it back to the flow file.")
 @SeeAlso({})

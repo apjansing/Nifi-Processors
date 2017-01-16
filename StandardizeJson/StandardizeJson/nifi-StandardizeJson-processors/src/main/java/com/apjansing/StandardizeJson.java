@@ -33,69 +33,167 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-@Tags({"example"})
-@CapabilityDescription("Provide a description")
+@Tags({ "json", "standard fields", "standardize" })
+@CapabilityDescription("This processor standardizes the fields of a Json. "
+		+ "Please refer to the README in the original Maven project for a "
+		+ "full length description of how to use this processor.")
 @SeeAlso({})
-@ReadsAttributes({@ReadsAttribute(attribute="", description="")})
-@WritesAttributes({@WritesAttribute(attribute="", description="")})
+@ReadsAttributes({ @ReadsAttribute(attribute = "", description = "") })
+@WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
 public class StandardizeJson extends AbstractProcessor {
+	
+	Logger logger = LoggerFactory.getLogger(StandardizeJson.class);
 
-    public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor
-            .Builder().name("MY_PROPERTY")
-            .displayName("My property")
-            .description("Example Property")
-            .required(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-            .build();
+	public static final PropertyDescriptor STANDARD = new PropertyDescriptor.Builder().name("Standard's location")
+			.displayName("Standard's location")
+			.description("Path to the csv with a mapping for expected values to standard values.").required(true)
+			.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
-    public static final Relationship MY_RELATIONSHIP = new Relationship.Builder()
-            .name("MY_RELATIONSHIP")
-            .description("Example relationship")
-            .build();
+	public static final PropertyDescriptor DELIM = new PropertyDescriptor.Builder().name("Flattening delimeter")
+			.description("This is the delimeter to be used to signify where the Json was flattened. i.e. "
+					+ "first:{second... turns into first.second when the delimeter is \".\".")
+			.defaultValue(".").required(true).addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
-    private List<PropertyDescriptor> descriptors;
+	public static final Relationship SUCCESS = new Relationship.Builder().name("Success").description("Success")
+			.build();
+	public static final Relationship FAILURE = new Relationship.Builder().name("Failure").description("Failure")
+			.build();
 
-    private Set<Relationship> relationships;
+	private List<PropertyDescriptor> descriptors;
 
-    @Override
-    protected void init(final ProcessorInitializationContext context) {
-        final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-        descriptors.add(MY_PROPERTY);
-        this.descriptors = Collections.unmodifiableList(descriptors);
+	private Set<Relationship> relationships;
 
-        final Set<Relationship> relationships = new HashSet<Relationship>();
-        relationships.add(MY_RELATIONSHIP);
-        this.relationships = Collections.unmodifiableSet(relationships);
-    }
+	@Override
+	protected void init(final ProcessorInitializationContext context) {
+		final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
+		descriptors.add(STANDARD);
+		descriptors.add(DELIM);
+		this.descriptors = Collections.unmodifiableList(descriptors);
 
-    @Override
-    public Set<Relationship> getRelationships() {
-        return this.relationships;
-    }
+		final Set<Relationship> relationships = new HashSet<Relationship>();
+		relationships.add(SUCCESS);
+		relationships.add(FAILURE);
+		this.relationships = Collections.unmodifiableSet(relationships);
+	}
 
-    @Override
-    public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-        return descriptors;
-    }
+	@Override
+	public Set<Relationship> getRelationships() {
+		return this.relationships;
+	}
 
-    @OnScheduled
-    public void onScheduled(final ProcessContext context) {
+	@Override
+	public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
+		return descriptors;
+	}
 
-    }
+	@OnScheduled
+	public void onScheduled(final ProcessContext context) {
 
-    @Override
-    public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
-        FlowFile flowFile = session.get();
-        if ( flowFile == null ) {
-            return;
-        }
-        // TODO implement
-    }
+	}
+
+	@Override
+	public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
+		FlowFile flowFile = session.get();
+		if (flowFile == null) {
+			return;
+		}
+
+		String stdLoc = context.getProperty(STANDARD).getValue();
+		String delim = context.getProperty(DELIM).getValue();
+		File file = new File(stdLoc);
+		try {
+			BufferedReader bin = new BufferedReader(new FileReader(file));
+			Pattern[] filenamePatterns = getPatterns(bin, delim);
+			String ffFileName = flowFile.getAttribute("filename");
+			int patternColumn = findPatternColumn(filenamePatterns, ffFileName);
+			if(patternColumn == 0){
+				session.transfer(flowFile, FAILURE);
+			} else {
+				String[][] keys = getKeys(bin, delim, patternColumn);
+				
+			}
+		} catch (IOException e) {
+			logger.error("IOException with " + file, e);
+		}
+
+
+	}
+
+	private String[][] getKeys(BufferedReader bin, String delim, int patternColumn) throws IOException {
+		HashMap<String, String> keyMap = new HashMap<>();
+		String line = "";
+		while((line = bin.readLine()) != null){
+			String[] lineTokens = line.split(Pattern.quote(delim));
+		}
+		return null;
+	}
+
+	private int findPatternColumn(Pattern[] filenamePatterns, String ffFileName) {
+		int patternColumn = 0;
+		for(Pattern p : filenamePatterns){
+			Matcher matcher = p.matcher(ffFileName);
+			if(matcher.find()){
+				return patternColumn;
+			} else {
+				patternColumn++;
+			}
+		}		return 0;
+	}
+
+	private Pattern[] getPatterns(BufferedReader bin, String delim) throws IOException {
+		String[] P = bin.readLine().split(Pattern.quote(delim));
+		ArrayList<Pattern> patterns = new ArrayList<>();
+		for(String p : P){
+			patterns.add(Pattern.compile(p));
+		}
+		return patterns.toArray(new Pattern[0]);
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -49,8 +49,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-@Tags({ "json", "jsonarray", "flatten", "expand", "ajansing" })
-@CapabilityDescription("Provide a description")
+@Tags({ "json", "jsonarray", "flatten", "expand", "compress"})
+@CapabilityDescription("Processor that can flatten or recompress a json.")
 @SeeAlso({})
 @ReadsAttributes({ @ReadsAttribute(attribute = "", description = "") })
 @WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
@@ -64,7 +64,7 @@ public class JsonAccordion extends AbstractProcessor {
 			.name("Expand or flatten").allowableValues("Compress", "Flatten").defaultValue("Compress").required(true)
 			.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
-	public static final PropertyDescriptor SEP = new PropertyDescriptor.Builder().name("Flattening delimeter")
+	public static final PropertyDescriptor DELIM = new PropertyDescriptor.Builder().name("Flattening delimeter")
 			.description("This is the delimeter to be used to signify where the Json was flattened. i.e. "
 					+ "first:{second... turns into first.second when the delimeter is \".\".")
 			.defaultValue(".").required(true).addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
@@ -86,7 +86,7 @@ public class JsonAccordion extends AbstractProcessor {
 	protected void init(final ProcessorInitializationContext context) {
 		final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
 		descriptors.add(COMPRESSOR_FLATTEN);
-		descriptors.add(SEP);
+		descriptors.add(DELIM);
 		this.descriptors = Collections.unmodifiableList(descriptors);
 
 		final Set<Relationship> relationships = new HashSet<Relationship>();
@@ -118,7 +118,7 @@ public class JsonAccordion extends AbstractProcessor {
 			return;
 		}
 
-		String delim = context.getProperty(SEP).getValue();
+		String delim = context.getProperty(DELIM).getValue();
 
 		try {
 			switch (context.getProperty(COMPRESSOR_FLATTEN).getValue()) {
