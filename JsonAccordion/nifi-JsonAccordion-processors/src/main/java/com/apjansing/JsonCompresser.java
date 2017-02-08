@@ -13,8 +13,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+/**
+ * @author apjansing
+ *
+ */
 public class JsonCompresser {
-
+	
 	private Logger logger;
 	final Gson gson = new Gson();
 	private static JsonObject json;

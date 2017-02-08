@@ -52,6 +52,12 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * This processor standardizes the fields of a Json by lists in properties
+ * mapping to the property names.
+ * 
+ * @author apjansing
+ */
 @Tags({ "json", "standard fields", "standardize" })
 @CapabilityDescription("This processor standardizes the fields of a Json. "
 		+ "Please refer to the README in the original Maven project for a "
@@ -60,7 +66,7 @@ import java.util.regex.Pattern;
 @ReadsAttributes({ @ReadsAttribute(attribute = "", description = "") })
 @WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
 public class StandardizeJson extends AbstractProcessor {
-	
+
 	Logger logger = LoggerFactory.getLogger(StandardizeJson.class);
 
 	public static final PropertyDescriptor STANDARD = new PropertyDescriptor.Builder().name("Standard's location")
@@ -125,23 +131,22 @@ public class StandardizeJson extends AbstractProcessor {
 			Pattern[] filenamePatterns = getPatterns(bin, delim);
 			String ffFileName = flowFile.getAttribute("filename");
 			int patternColumn = findPatternColumn(filenamePatterns, ffFileName);
-			if(patternColumn == 0){
+			if (patternColumn == 0) {
 				session.transfer(flowFile, FAILURE);
 			} else {
 				String[][] keys = getKeys(bin, delim, patternColumn);
-				
+
 			}
 		} catch (IOException e) {
 			logger.error("IOException with " + file, e);
 		}
-
 
 	}
 
 	private String[][] getKeys(BufferedReader bin, String delim, int patternColumn) throws IOException {
 		HashMap<String, String> keyMap = new HashMap<>();
 		String line = "";
-		while((line = bin.readLine()) != null){
+		while ((line = bin.readLine()) != null) {
 			String[] lineTokens = line.split(Pattern.quote(delim));
 		}
 		return null;
@@ -149,51 +154,23 @@ public class StandardizeJson extends AbstractProcessor {
 
 	private int findPatternColumn(Pattern[] filenamePatterns, String ffFileName) {
 		int patternColumn = 0;
-		for(Pattern p : filenamePatterns){
+		for (Pattern p : filenamePatterns) {
 			Matcher matcher = p.matcher(ffFileName);
-			if(matcher.find()){
+			if (matcher.find()) {
 				return patternColumn;
 			} else {
 				patternColumn++;
 			}
-		}		return 0;
+		}
+		return 0;
 	}
 
 	private Pattern[] getPatterns(BufferedReader bin, String delim) throws IOException {
 		String[] P = bin.readLine().split(Pattern.quote(delim));
 		ArrayList<Pattern> patterns = new ArrayList<>();
-		for(String p : P){
+		for (String p : P) {
 			patterns.add(Pattern.compile(p));
 		}
 		return patterns.toArray(new Pattern[0]);
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
