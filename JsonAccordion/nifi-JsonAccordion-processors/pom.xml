@@ -17,7 +17,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.ajansing</groupId>
+        <groupId>com.apjansing</groupId>
         <artifactId>JsonAccordion</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
