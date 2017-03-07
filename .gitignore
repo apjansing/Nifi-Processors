@@ -1,0 +1,5 @@
+#MAC stuff
+*.DS_Store
+
+#Making sure I don't push build NAR files... they could be large
+*.naw
