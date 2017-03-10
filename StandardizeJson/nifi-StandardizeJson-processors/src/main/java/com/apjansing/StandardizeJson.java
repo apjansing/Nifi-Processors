@@ -36,6 +36,13 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ajansing.NifiTools;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -47,7 +54,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -60,25 +70,17 @@ import java.util.regex.Pattern;
  */
 @Tags({ "json", "standard fields", "standardize" })
 @CapabilityDescription("This processor standardizes the fields of a Json. "
-		+ "Please refer to the README in the original Maven project for a "
-		+ "full length description of how to use this processor.")
+		+ "Create attributes with the key being the destination key and the value being a comma-separated list of keys to change.")
 @SeeAlso({})
 @ReadsAttributes({ @ReadsAttribute(attribute = "", description = "") })
 @WritesAttributes({ @WritesAttribute(attribute = "", description = "") })
 public class StandardizeJson extends AbstractProcessor {
+	final Gson gson = new Gson();
+	final NifiTools nt = new NifiTools();
+	final Logger logger = LoggerFactory.getLogger(StandardizeJson.class);
 
-	Logger logger = LoggerFactory.getLogger(StandardizeJson.class);
-
-	public static final PropertyDescriptor STANDARD = new PropertyDescriptor.Builder().name("Standard's location")
-			.displayName("Standard's location")
-			.description("Path to the csv with a mapping for expected values to standard values.").required(true)
-			.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
-
-	public static final PropertyDescriptor DELIM = new PropertyDescriptor.Builder().name("Flattening delimeter")
-			.description("This is the delimeter to be used to signify where the Json was flattened. i.e. "
-					+ "first:{second... turns into first.second when the delimeter is \".\".")
-			.defaultValue(".").required(true).addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
-
+	public static final Relationship ORIGINAL = new Relationship.Builder().name("Original").description("Original")
+			.build();
 	public static final Relationship SUCCESS = new Relationship.Builder().name("Success").description("Success")
 			.build();
 	public static final Relationship FAILURE = new Relationship.Builder().name("Failure").description("Failure")
@@ -91,8 +93,6 @@ public class StandardizeJson extends AbstractProcessor {
 	@Override
 	protected void init(final ProcessorInitializationContext context) {
 		final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-		descriptors.add(STANDARD);
-		descriptors.add(DELIM);
 		this.descriptors = Collections.unmodifiableList(descriptors);
 
 		final Set<Relationship> relationships = new HashSet<Relationship>();
@@ -122,55 +122,64 @@ public class StandardizeJson extends AbstractProcessor {
 		if (flowFile == null) {
 			return;
 		}
-
-		String stdLoc = context.getProperty(STANDARD).getValue();
-		String delim = context.getProperty(DELIM).getValue();
-		File file = new File(stdLoc);
-		try {
-			BufferedReader bin = new BufferedReader(new FileReader(file));
-			Pattern[] filenamePatterns = getPatterns(bin, delim);
-			String ffFileName = flowFile.getAttribute("filename");
-			int patternColumn = findPatternColumn(filenamePatterns, ffFileName);
-			if (patternColumn == 0) {
-				session.transfer(flowFile, FAILURE);
-			} else {
-				String[][] keys = getKeys(bin, delim, patternColumn);
-
-			}
-		} catch (IOException e) {
-			logger.error("IOException with " + file, e);
-		}
+		
+		JsonElement json = getJsonElement(flowFile, session);
+		Set<Entry<String, String>> attributeSet = flowFile.getAttributes().entrySet();
+		
 
 	}
 
-	private String[][] getKeys(BufferedReader bin, String delim, int patternColumn) throws IOException {
-		HashMap<String, String> keyMap = new HashMap<>();
-		String line = "";
-		while ((line = bin.readLine()) != null) {
-			String[] lineTokens = line.split(Pattern.quote(delim));
-		}
-		return null;
+	private JsonElement getJsonElement(FlowFile flowFile, ProcessSession session) {
+		String resource = nt.readAsString(flowFile, session);
+		JsonParser jp = new JsonParser();
+		JsonElement elem = jp.parse(resource);
+		if(elem.isJsonArray())
+			return stadardizeJsonArray(elem.getAsJsonArray(), flowFile.getAttributes().entrySet());
+		
+		return stadardizeJsonObject(elem.getAsJsonObject(), flowFile.getAttributes().entrySet());
 	}
 
-	private int findPatternColumn(Pattern[] filenamePatterns, String ffFileName) {
-		int patternColumn = 0;
-		for (Pattern p : filenamePatterns) {
-			Matcher matcher = p.matcher(ffFileName);
-			if (matcher.find()) {
-				return patternColumn;
-			} else {
-				patternColumn++;
+	private JsonObject stadardizeJsonObject(JsonObject asJsonObject, Set<Entry<String, String>> entrySet) {
+		Set<Entry<String, JsonElement>> jsonSet = asJsonObject.entrySet();
+		for(Entry<String, String> entry : entrySet){
+			Set<String> sourceKeys = makeSourceSet(entry.getValue().split(","));
+			for(String key : sourceKeys){
+				if(asJsonObject.has(key)){
+					if(asJsonObject.has(entry.getKey())){
+						JsonArray ja = append(asJsonObject.get(entry.getKey()).getAsJsonArray().iterator(), asJsonObject.get(key).getAsJsonArray().iterator());
+						asJsonObject.remove(entry.getKey());
+						asJsonObject.remove(key);
+						asJsonObject.add(entry.getKey(), ja);
+					}else{
+						asJsonObject.add(entry.getKey(), asJsonObject.get(key));
+						asJsonObject.remove(key);
+					}
+				}
 			}
 		}
-		return 0;
+		return asJsonObject;
 	}
 
-	private Pattern[] getPatterns(BufferedReader bin, String delim) throws IOException {
-		String[] P = bin.readLine().split(Pattern.quote(delim));
-		ArrayList<Pattern> patterns = new ArrayList<>();
-		for (String p : P) {
-			patterns.add(Pattern.compile(p));
+	private JsonArray append(Iterator<JsonElement> iterator, Iterator<JsonElement> iterator2) {
+		JsonArray ja = new JsonArray();
+		while(iterator.hasNext())
+			ja.add(iterator.next());
+		while(iterator2.hasNext())
+			ja.add(iterator2.next());
+		return ja;
+	}
+
+	private Set<String> makeSourceSet(String[] split) {
+		Set<String> set = new HashSet<>();
+		for(String s : split){
+			set.add(s);
 		}
-		return patterns.toArray(new Pattern[0]);
+		return set;
+	}
+
+	private JsonElement stadardizeJsonArray(JsonArray asJsonArray, Set<Entry<String, String>> entrySet) {
+		for(int i = 0; i < asJsonArray.size(); i++)
+			asJsonArray.set(i, stadardizeJsonObject(asJsonArray.get(i).getAsJsonObject(), entrySet));
+		return asJsonArray;
 	}
 }
