@@ -12,3 +12,5 @@ JsonFlattener - Functioning.
 JsonAccordion - Functioning.
 
 IOProcessor - Functioning, but still new. Feel free to experiment with it, but report any problems you might have to my issues section.
+
+StandardizeJson - Logic looks to be there, but remains untested and has no routing.
