@@ -1,2 +1,19 @@
 language: java
-mvn install
+
+env:
+  - USER_LANGUAGE=en USER_REGION=US'
+
+os:
+  - linux
+
+dk:
+  - oraclejdk8
+
+# Caches mvn repository in order to speed upbuilds
+cache:
+  directories:
+  - $HOME/.m2
+  - $HOME/.npm
+
+install:
+  - mvn clean install
